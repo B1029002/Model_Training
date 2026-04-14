@@ -35,8 +35,17 @@ Training/
 ## Setup
 
 ```bash
-#run the virtual environment
+#create the virtual environment
 conda create -n model_training python=3.10 -y
+#run the virtaul environment
+conda activate model_training
+
+#you can use the instructions to install pytorch and cuda
+pip install --index-url https://download.pytorch.org/whl/cu124 \
+    torch==2.5.1 torchvision torchaudio
+conda install cuda -c "nvidia/label/cuda-12.4.0"
+conda install -c conda-forge cuda-nvcc=12.4
+
 # install after install pytorch and cuda
 pip install -r requirements.txt
 
