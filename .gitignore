@@ -1,0 +1,8 @@
+ft/
+ft_qwen/
+logs/
+wandb/
+*.bin
+*.safetensors
+*.pt
+*.ckpt

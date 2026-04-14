@@ -1,0 +1,10 @@
+{#- Simple Mistral-style chat template without system prompt -#}
+{#- Format: <s>[INST]user message[/INST]assistant response</s> -#}
+{%- for message in messages -%}
+{%- if message['role'] == 'user' -%}
+{%- if loop.index0 == 0 -%}{{ bos_token }}{%- endif -%}
+[INST]{{ message['content'] }}[/INST]
+{%- elif message['role'] == 'assistant' -%}
+{{ message['content'] }}{{ eos_token }}
+{%- endif -%}
+{%- endfor -%}
