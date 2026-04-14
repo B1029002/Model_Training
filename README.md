@@ -35,6 +35,9 @@ Training/
 ## Setup
 
 ```bash
+#run the virtual environment
+conda create -n model_training python=3.10 -y
+# install after install pytorch and cuda
 pip install -r requirements.txt
 
 # Flash Attention 2 (install separately based on your CUDA version)
