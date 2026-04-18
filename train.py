@@ -408,8 +408,11 @@ def preprocess_function(
     tokenizer: AutoTokenizer,
     max_seq_length: int,
 ) -> Dict[str, List]:
-    """Preprocess examples using chat template for instruction tuning."""
+    """Preprocess examples using chat template for instruction tuning.
+    Only assistant responses are used for loss computation (label masking).
+    """
 
+    IGNORE_INDEX = -100
     all_input_ids = []
     all_attention_mask = []
     all_labels = []
@@ -419,34 +422,72 @@ def preprocess_function(
         if not messages or len(messages) == 0:
             continue
 
-        # Apply chat template
-        # Ministral-3-14B-Instruct uses the standard Mistral instruct format
+        # Build the full conversation text and track assistant response boundaries
+        # Strategy: tokenize incrementally to find where each assistant turn starts/ends
         try:
-            text = tokenizer.apply_chat_template(
+            # Tokenize the full conversation
+            full_text = tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=False,
             )
         except Exception as e:
-            # Skip problematic messages
             logger.warning(f"Skipping message due to error: {e}")
             continue
 
-        # Tokenize
-        tokenized = tokenizer(
-            text,
+        full_tokenized = tokenizer(
+            full_text,
             truncation=True,
             max_length=max_seq_length,
             padding=False,
             return_tensors=None,
         )
 
-        input_ids = tokenized["input_ids"]
-        attention_mask = tokenized["attention_mask"]
+        input_ids = full_tokenized["input_ids"]
+        attention_mask = full_tokenized["attention_mask"]
+        labels = [IGNORE_INDEX] * len(input_ids)
 
-        # Create labels (same as input_ids for causal LM)
-        # Mask padding tokens in labels
-        labels = input_ids.copy()
+        # Tokenize prefix up to each assistant turn to find boundaries
+        prefix_messages = []
+        for msg in messages:
+            if msg["role"] == "assistant":
+                # Tokenize everything before this assistant turn
+                try:
+                    prefix_text = tokenizer.apply_chat_template(
+                        prefix_messages,
+                        tokenize=False,
+                        add_generation_prompt=True,
+                    )
+                except Exception:
+                    prefix_text = tokenizer.apply_chat_template(
+                        prefix_messages,
+                        tokenize=False,
+                        add_generation_prompt=False,
+                    )
+
+                # Tokenize everything including this assistant turn
+                prefix_plus_assistant = prefix_messages + [msg]
+                full_up_to_here = tokenizer.apply_chat_template(
+                    prefix_plus_assistant,
+                    tokenize=False,
+                    add_generation_prompt=False,
+                )
+
+                prefix_ids = tokenizer(
+                    prefix_text, truncation=False, padding=False, return_tensors=None,
+                )["input_ids"]
+                full_up_to_here_ids = tokenizer(
+                    full_up_to_here, truncation=False, padding=False, return_tensors=None,
+                )["input_ids"]
+
+                start_idx = len(prefix_ids)
+                end_idx = min(len(full_up_to_here_ids), len(input_ids))
+
+                # Unmask assistant tokens in labels
+                for i in range(start_idx, end_idx):
+                    labels[i] = input_ids[i]
+
+            prefix_messages.append(msg)
 
         all_input_ids.append(input_ids)
         all_attention_mask.append(attention_mask)
