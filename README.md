@@ -58,7 +58,9 @@ pip install flash-attn --no-build-isolation
 ### Fine-tuning
 
 ```bash
+# There's a lot of .sh file to modify, choose one you want ot use.
 # Edit run_finetune.sh to set MODEL_NAME, DATASET_NAME, OUTPUT_DIR, etc.
+e.g:
 bash run_finetune.sh
 ```
 
