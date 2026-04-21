@@ -18,8 +18,13 @@ MODEL_NAME="TAIDE-EDU/phi-3.5-mini-instruct_zhtw_ld1_hq3.1_b8.3-p3_st-task-1-2-3
 DATASET_PATH="/home/chris/LLM-Training/final_balanced_dataset"
 OUTPUT_DIR="/home/chris/Training/outputs/phi-3.5-mini-finetune"
 
-# Create output directory
+# Create output directory and logs directory
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$SCRIPT_DIR/logs"
+
+# Log file with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="$SCRIPT_DIR/logs/phi3.5_training_${TIMESTAMP}.log"
 
 # Number of GPUs
 NUM_GPUS=1
@@ -46,6 +51,7 @@ echo "Dataset: $DATASET_PATH"
 echo "Output: $OUTPUT_DIR"
 echo "GPUs: $NUM_GPUS"
 echo "DeepSpeed Config: $DS_CONFIG"
+echo "Log File: $LOG_FILE"
 echo "============================================"
 
 # Launch training with accelerate
@@ -80,9 +86,11 @@ accelerate launch \
     --load_best_model_at_end True \
     --metric_for_best_model eval_loss \
     --dataloader_num_workers 4 \
-    --dataloader_pin_memory True
+    --dataloader_pin_memory True \
+    2>&1 | tee -a "$LOG_FILE"
 
 echo "============================================"
 echo "Training Complete!"
 echo "Model saved to: $OUTPUT_DIR"
+echo "Log saved to: $LOG_FILE"
 echo "============================================"
