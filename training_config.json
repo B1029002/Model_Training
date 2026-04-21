@@ -11,7 +11,7 @@
     "max_seq_length": 4096,
     "validation_split": 0.05,
 
-    "output_dir": "/home/chris/LLM-Training/Training/outputs",
+    "output_dir": "/home/chris/Training/outputs",
     "num_train_epochs": 5,
     "per_device_train_batch_size": 1,
     "per_device_eval_batch_size": 1,
@@ -32,7 +32,7 @@
     "bf16": true,
     "tf32": true,
     "gradient_checkpointing": true,
-    "deepspeed": "/home/chris/LLM-Training/Training/ds_config_zero2.json",
+    "deepspeed": "/home/chris/Training/ds_config_zero2.json",
     "report_to": "wandb",
     "run_name": "ministral-3-14b-finetune",
     "dataloader_num_workers": 4,

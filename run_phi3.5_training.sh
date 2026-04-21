@@ -1,22 +1,22 @@
 #!/bin/bash
-# Training launch script for Ministral-3-14B-Instruct-2512-BF16
-# Uses 4x H200 GPUs with DeepSpeed ZeRO Stage 2
+# Training launch script for Phi-3.5-mini fine-tuning
+# FT base model: TAIDE-EDU/phi-3.5-mini-instruct_zhtw_ld1_hq3.1_b8.3-p3_st-task-1-2-3-v3_e4_ORPO_1103-1019_fix3
 
 set -e
 
 # ============ Configuration ============
 export CUDA_VISIBLE_DEVICES=3
-export WANDB_PROJECT="ministral-3-finetune"
-export WANDB_RUN_NAME="ministral-3-14b-instruct-finetune"
+export WANDB_PROJECT="phi-3.5-mini-finetune"
+export WANDB_RUN_NAME="phi-3.5-mini-instruct-finetune"
 
 # Training directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Model and data paths
-MODEL_NAME="mistralai/Ministral-3-14B-Instruct-2512-BF16"
+MODEL_NAME="TAIDE-EDU/phi-3.5-mini-instruct_zhtw_ld1_hq3.1_b8.3-p3_st-task-1-2-3-v3_e4_ORPO_1103-1019_fix3"
 DATASET_PATH="/home/chris/LLM-Training/final_balanced_dataset"
-OUTPUT_DIR="/home/chris/Training/outputs"
+OUTPUT_DIR="/home/chris/Training/outputs/phi-3.5-mini-finetune"
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -39,7 +39,7 @@ EVAL_STEPS=500
 LOGGING_STEPS=10
 
 echo "============================================"
-echo "Starting Ministral-3-14B Fine-tuning"
+echo "Starting Phi-3.5-mini Fine-tuning"
 echo "============================================"
 echo "Model: $MODEL_NAME"
 echo "Dataset: $DATASET_PATH"

@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/home/chris/LLM-Training/Training/outputs",
+        default="/home/chris/Training/outputs",
         help="Path to the trained model directory",
     )
     parser.add_argument(

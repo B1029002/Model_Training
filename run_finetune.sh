@@ -30,10 +30,10 @@ cd "$SCRIPT_DIR"
 
 # Model and data paths
 # 使用 checkpoint-10000 作為起點
-MODEL_NAME="/home/chris/LLM-Training/Training/cp/checkpoint-10000"
+MODEL_NAME="/home/chris/Training/cp/checkpoint-10000"
 DATASET_NAME="TAIDE-EDU/ft-dev"
 DATASET_DIR="b8.3-p3"  # data_dir parameter for subdirectory
-OUTPUT_DIR="/home/chris/LLM-Training/Training/ft"
+OUTPUT_DIR="/home/chris/Training/ft"
 
 # Create output directory and logs directory
 mkdir -p "$OUTPUT_DIR"
@@ -67,7 +67,7 @@ USE_PACKING=False
 #   RESUME=False          # 從頭開始訓練
 #   RESUME=True           # 自動從最新 checkpoint 繼續
 #   RESUME=/path/to/checkpoint-1000  # 從指定 checkpoint 繼續
-RESUME=/home/chris/LLM-Training/Training/ft/checkpoint-8800
+RESUME=/home/chris/Training/ft/checkpoint-8800
 # Determine resume checkpoint
 RESUME_ARG=""
 if [ "$RESUME" = "True" ]; then

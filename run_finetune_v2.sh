@@ -30,9 +30,9 @@ cd "$SCRIPT_DIR"
 
 # Model and data paths
 # 使用 ft/checkpoint-17466 作為起點（第一輪 finetune 的結果）
-MODEL_NAME="/home/chris/LLM-Training/Training/ft/checkpoint-17466"
+MODEL_NAME="/home/chris/Training/ft/checkpoint-17466"
 DATASET_PATH="/home/chris/LLM-Training/final_merged_dataset"
-OUTPUT_DIR="/home/chris/LLM-Training/Training/ft_v2"
+OUTPUT_DIR="/home/chris/Training/ft_v2"
 
 # Create output directory and logs directory
 mkdir -p "$OUTPUT_DIR"

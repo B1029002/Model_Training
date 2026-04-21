@@ -3,7 +3,7 @@
 set -e
 
 # ============ Configuration ============
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 export WANDB_PROJECT="ministral-3-continue-pretrain"
 export WANDB_RUN_NAME="ministral-3-14b-continue-pretrain-ld1-hq3"
 
@@ -23,7 +23,7 @@ cd "$SCRIPT_DIR"
 MODEL_NAME="mistralai/Ministral-3-14B-Instruct-2512-BF16"
 DATASET_NAME="TAIDE-EDU/Edu-TAIDE-PT-Data"
 DATASET_REVISION="ld1-hq3"
-OUTPUT_DIR="/home/chris/LLM-Training/Training/cp"
+OUTPUT_DIR="/home/chris/Training/cp"
 
 # Create output directory and logs directory
 mkdir -p "$OUTPUT_DIR"

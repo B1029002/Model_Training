@@ -130,7 +130,7 @@ class DataArguments:
 class CustomTrainingArguments(TrainingArguments):
     """Extended training arguments."""
     output_dir: str = field(
-        default="/home/chris/LLM-Training/Training/outputs",
+        default="/home/chris/Training/outputs",
         metadata={"help": "Output directory for model checkpoints"}
     )
     num_train_epochs: float = field(
@@ -260,15 +260,18 @@ def setup_tokenizer(model_args: ModelArguments, is_continue_pretrain: bool = Fal
         num_added = tokenizer.add_special_tokens(special_tokens_dict)
         logger.info(f"Added {num_added} special tokens to tokenizer")
 
-        # Set custom chat template only for Mistral models (others use their native template)
+        # Set custom chat template per model family (others use their native template)
         model_name_lower = model_args.model_name_or_path.lower()
         if "mistral" in model_name_lower or "ministral" in model_name_lower:
             custom_template = get_chat_template_for_ministral()
             if custom_template:
                 tokenizer.chat_template = custom_template
                 logger.info("Set custom Mistral chat template (no system prompt)")
+        elif "phi-3" in model_name_lower or "phi3" in model_name_lower:
+            tokenizer.chat_template = get_chat_template_for_phi3()
+            logger.info("Set custom Phi-3 chat template")
         else:
-            logger.info("Non-Mistral model detected, keeping native chat template")
+            logger.info("Unknown model family, keeping native chat template")
     else:
         logger.info("Continue-pretrain mode: skipping special tokens and chat template")
 
@@ -289,8 +292,7 @@ def setup_model(model_args: ModelArguments, tokenizer: AutoTokenizer, is_continu
     attn_implementation = "flash_attention_2" if model_args.use_flash_attention_2 else "sdpa"
     logger.info(f"Using attention implementation: {attn_implementation}")
 
-    # Load and fix config (ministral3 -> mistral for compatibility)
-    # Check if model_name_or_path is a local path or HuggingFace Hub ID
+    # Load raw config to detect model type
     if os.path.exists(model_args.model_name_or_path):
         # Local path
         config_path = os.path.join(model_args.model_name_or_path, "config.json")
@@ -304,16 +306,18 @@ def setup_model(model_args: ModelArguments, tokenizer: AutoTokenizer, is_continu
     with open(config_path, 'r') as f:
         config_dict = json.load(f)
 
-    # Fix text_config.model_type if needed
-    if config_dict.get("text_config", {}).get("model_type") == "ministral3":
-        config_dict["text_config"]["model_type"] = "mistral"
-        logger.info("Fixed config: text_config.model_type ministral3 -> mistral")
+    model_type = config_dict.get("model_type", "")
 
-    from transformers import Mistral3Config
-    config = Mistral3Config.from_dict(config_dict)
+    if model_type == "mistral3":
+        # Mistral-3 is a multimodal model, use Mistral3ForConditionalGeneration
+        # Fix text_config.model_type if needed
+        if config_dict.get("text_config", {}).get("model_type") == "ministral3":
+            config_dict["text_config"]["model_type"] = "mistral"
+            logger.info("Fixed config: text_config.model_type ministral3 -> mistral")
 
-    # Mistral-3 is a multimodal model, use Mistral3ForConditionalGeneration
-    if config.model_type == "mistral3":
+        from transformers import Mistral3Config
+        config = Mistral3Config.from_dict(config_dict)
+
         logger.info("Detected Mistral-3 multimodal model, using Mistral3ForConditionalGeneration")
         model = Mistral3ForConditionalGeneration.from_pretrained(
             model_args.model_name_or_path,
@@ -329,7 +333,8 @@ def setup_model(model_args: ModelArguments, tokenizer: AutoTokenizer, is_continu
         # For Mistral-3, vocab size is in text_config
         original_vocab_size = config.text_config.vocab_size
     else:
-        # Standard causal LM
+        # Standard causal LM (Phi-3/3.5, Llama, Qwen, Mistral, etc.)
+        logger.info(f"Using AutoModelForCausalLM for model_type: {model_type}")
         model = AutoModelForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             torch_dtype=torch.bfloat16,
@@ -366,14 +371,23 @@ def setup_model(model_args: ModelArguments, tokenizer: AutoTokenizer, is_continu
     # Setup LoRA if enabled
     if model_args.use_lora:
         logger.info("Setting up LoRA...")
+
+        # Phi-3/3.5 uses fused qkv_proj and gate_up_proj; others use separate projections
+        model_name_lower = model_args.model_name_or_path.lower()
+        if "phi-3" in model_name_lower or "phi3" in model_name_lower:
+            target_modules = ["qkv_proj", "o_proj", "gate_up_proj", "down_proj"]
+        else:
+            target_modules = [
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj",
+            ]
+        logger.info(f"LoRA target_modules: {target_modules}")
+
         lora_config = LoraConfig(
             r=model_args.lora_r,
             lora_alpha=model_args.lora_alpha,
             lora_dropout=model_args.lora_dropout,
-            target_modules=[
-                "q_proj", "k_proj", "v_proj", "o_proj",
-                "gate_proj", "up_proj", "down_proj",
-            ],
+            target_modules=target_modules,
             bias="none",
             task_type="CAUSAL_LM",
         )
@@ -400,6 +414,34 @@ def get_chat_template_for_ministral():
 {{ message['content'] }}{{ eos_token }}
 {%- endif -%}
 {%- endfor -%}"""
+    return template
+
+
+def get_chat_template_for_phi3():
+    """Phi-3 chat template matching src/llm_training/data/chat_templates/phi-3.j2.
+
+    Format: <|system|>\\n...<|end|>\\n<|user|>\\n...<|end|>\\n<|assistant|>\\n...<|end|>\\n
+    """
+    template = """{%- for message in messages %}
+    {%- set content = message.content | trim %}
+    {%- if message.role == 'system' and content %}
+        {{- '<|system|>\n' + content + '<|end|>\n' }}
+    {%- elif message.role == 'user' %}
+        {{- '<|user|>\n' + content + '<|end|>\n' }}
+    {%- elif message.role == 'assistant' %}
+        {{- '<|assistant|>\n' -}}
+        {% generation %}
+            {{- content + '<|end|>\n' -}}
+        {% endgeneration %}
+    {%- endif %}
+{%- endfor %}
+{%- if add_generation_prompt %}
+    {{- '<|assistant|>\n' }}
+{%- else %}
+    {% generation %}
+        {{- eos_token -}}
+    {% endgeneration %}
+{%- endif %}"""
     return template
 
 

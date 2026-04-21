@@ -124,7 +124,7 @@ def main():
     parser.add_argument(
         "--output_path",
         type=str,
-        default="/home/chris/LLM-Training/Training/tokenizer",
+        default="/home/chris/Training/tokenizer",
         help="Path to save the modified tokenizer",
     )
     parser.add_argument(
