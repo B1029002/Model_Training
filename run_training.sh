@@ -18,8 +18,13 @@ MODEL_NAME="mistralai/Ministral-3-14B-Instruct-2512-BF16"
 DATASET_PATH="/home/chris/LLM-Training/final_balanced_dataset"
 OUTPUT_DIR="/home/chris/Training/outputs"
 
-# Create output directory
+# Create output directory and logs directory
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$SCRIPT_DIR/logs"
+
+# Log file with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="$SCRIPT_DIR/logs/mistral_training_${TIMESTAMP}.log"
 
 # Number of GPUs
 NUM_GPUS=1
@@ -81,6 +86,7 @@ accelerate launch \
     --metric_for_best_model eval_loss \
     --dataloader_num_workers 4 \
     --dataloader_pin_memory True
+    2>&1 | tee -a "$LOG_FILE"
 
 echo "============================================"
 echo "Training Complete!"
